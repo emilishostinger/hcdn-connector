@@ -304,16 +304,23 @@ func (v *View) stepLine(s step, t time.Duration) line {
 	return line{sp("  ○ ", v.pal.fg(colGray)), sp(s.doing, v.pal.fg(colGray))}
 }
 
+const (
+	titleLive  = " Your preview link "
+	titleEnded = " Link closed "
+)
+
 // box is the link in a frame, crossed out once the tunnel ends.
 func (v *View) box() []line {
 	url := termsafe.String(v.tunnel.URL)
 	frame, link := v.pal.fg(colLilac), bold+v.pal.fg(colWhite)
-	title := " Your preview link "
+	title := titleLive
 	if v.ended {
 		frame, link = v.pal.fg(colGray), strike+v.pal.fg(colGray)
-		title = " Link closed "
+		title = titleEnded
 	}
-	inner := utf8.RuneCountInString(url) + 6
+	// At least as wide as the longer title, so a short link never
+	// leaves the top border with a negative length.
+	inner := max(utf8.RuneCountInString(url)+6, utf8.RuneCountInString(titleLive)+2)
 	if cols, _ := v.size(); inner+4 >= cols {
 		return []line{{sp("  "+strings.TrimSpace(title)+"  ", v.pal.fg(colGray)), sp(url, link)}}
 	}
@@ -321,7 +328,7 @@ func (v *View) box() []line {
 	return []line{
 		{sp("  ╭─", frame), sp(title, frame), sp(strings.Repeat("─", inner-1-utf8.RuneCountInString(title))+"╮", frame)},
 		blank,
-		{sp("  │   ", frame), sp(url, link), sp("   │", frame)},
+		{sp("  │   ", frame), sp(url, link), sp(strings.Repeat(" ", inner-3-utf8.RuneCountInString(url))+"│", frame)},
 		blank,
 		{sp("  ╰"+strings.Repeat("─", inner)+"╯", frame)},
 	}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/hostinger/hcdn-connector/pkg/connector"
 )
@@ -212,5 +213,29 @@ func TestSupportedNotTerminal(t *testing.T) {
 	defer f.Close()
 	if Supported(f) || Supported(nil) {
 		t.Error("a file is not a terminal")
+	}
+}
+
+func TestShortURLBox(t *testing.T) {
+	v, _ := testView(false)
+	tun := tunnel(true)
+	tun.URL, tun.Hostname = "https://a.io", "a.io"
+	v.Ready(tun, "")
+	for _, got := range []string{screen(v), func() string { v.End(Stopped); return screen(v) }()} {
+		var widths []int
+		for _, l := range strings.Split(got, "\n") {
+			if strings.ContainsAny(l, "╭│╰") {
+				widths = append(widths, utf8.RuneCountInString(strings.TrimRight(l, " ")))
+			}
+		}
+		if len(widths) != 5 {
+			t.Fatalf("want 5 box rows, got %d in:\n%s", len(widths), got)
+		}
+		for _, w := range widths[1:] {
+			if w != widths[0] {
+				t.Errorf("box rows differ in width %v in:\n%s", widths, got)
+				break
+			}
+		}
 	}
 }
